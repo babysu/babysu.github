@@ -1,0 +1,85 @@
+# -*- coding:utf-8 -*-
+#编码声明
+ 
+# file: run_rss_one.py
+#文件名
+ 
+import tkinter
+import urllib
+import xml.parsers.expat
+from lxml import html
+import requests
+from html.parser import HTMLParser
+import os
+
+
+#导入方法模块
+class MyHtmlParser(HTMLParser):
+
+	def __init__(self,edit):
+		HTMLParser.__init__(self)
+	
+		self.edit = edit
+		self.a_title = False
+		self.a_text = False
+	def handle_starttag(self,tag,attrs):
+		if tag == 'title':
+			self.a_title = True
+		if tag == 'a':
+			self.a_text=True
+				
+	def handle_endtag(self,tag):
+		if tag == 'title':
+			self.a_title = False
+		if tag == 'a':
+			self.a_text = False
+	def handle_data(self,data):
+		if self.a_title:
+			self.edit.insert(tkinter.END,data)
+		if self.a_text:
+			self.edit.insert(tkinter.END,data+'\n')
+	
+	
+ 
+class Window:
+    def __init__(self, root):
+        self.root = root      # 创建组件
+        self.entryUrl = tkinter.Entry(root,width = 30)
+        self.entryUrl.place(x = 65, y = 15)
+        self.get = tkinter.Button(root,
+                text = '读取RSS', command = self.Get, font = ('system','10'))
+        self.get.place(x = 350, y = 15)
+        self.frame = tkinter.Frame(root, bd=2)
+        self.scrollbar = tkinter.Scrollbar(self.frame)
+        self.edit = tkinter.Text(self.frame,yscrollcommand = self.scrollbar.set,
+                width = 96, height = 32)
+        
+        self.scrollbar.config(command=self.edit.yview)
+        self.edit.pack(side = tkinter.LEFT)
+        self.scrollbar.pack(side=tkinter.RIGHT, fill=tkinter.Y)
+        self.frame.place(y = 50)
+ 
+    def Get(self):
+        url = self.entryUrl.get()
+        
+        if os.path.isdir(url):
+            print('ok,dir ')
+            dir=os.listdir(url) #如果要循环读取目录及子目录,用os.walk
+            print(dir,len(dir))
+        
+            for dir_n in dir:
+                self.edit.insert(tkinter.END,url+dir_n+'\n')
+        else: 
+            #注意python3的用法要加request
+            response=urllib.request.urlopen(url)
+            page = response.read()  # 读取URL内容
+            hp = MyHtmlParser(self.edit)
+            hp.feed(page.decode('utf-8')) #feed(data),主要用于接受带html标签的str，当调用这个方法并提供相应的data时，实例开始执行
+            hp.close()#结束执行close（）
+    
+root = tkinter.Tk()
+root.title('RSS 阅读器')
+window = Window(root)
+root.minsize(700,500)
+root.maxsize(700,500)
+root.mainloop()
